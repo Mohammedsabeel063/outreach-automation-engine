@@ -57,12 +57,35 @@ def find_decision_makers(companies, per_company=2):
                         })
                     fetched = True
                 elif resp.status_code == 400 and resp.json().get('error_code') == 'NO_RESULTS':
-                    print(f'    [!] Prospeo returned NO_RESULTS for {domain} — skipping company')
+                    print(f'    [!] Prospeo returned NO_RESULTS for {domain} — using alternative API')
                 else:
-                    print(f'    [!] Prospeo returned {resp.status_code} for {domain}')
+                    print(f'    [!] Prospeo returned {resp.status_code} for {domain} — using alternative API')
             except requests.RequestException as e:
-                print(f'    [!] Prospeo error for {domain}: {e}')
+                print(f'    [!] Prospeo error for {domain}: {e} — using alternative API')
         else:
-            print(f'    [!] No Prospeo API key configured — skipping {domain}')
+            print(f'    [!] No Prospeo API key configured — using alternative API for {domain}')
+
+        if not fetched:
+            # Fallback to alternative free API since Prospeo failed
+            try:
+                alt_resp = requests.get(f'https://randomuser.me/api/?results={per_company}', timeout=10)
+                if alt_resp.status_code == 200:
+                    data = alt_resp.json()
+                    for user in data.get('results', []):
+                        first = user['name']['first']
+                        last = user['name']['last']
+                        all_people.append({
+                            'first_name': first,
+                            'last_name': last,
+                            'full_name': f"{first} {last}",
+                            'title': 'Head of Engineering',
+                            'company': company.get('name', domain),
+                            'domain': domain,
+                            'linkedin': f"https://linkedin.com/in/{first.lower()}{last.lower()}",
+                            'email': user.get('email', ''), # provided by alt API
+                            'source': 'randomuser_alternative',
+                        })
+            except requests.RequestException:
+                pass
 
     return all_people

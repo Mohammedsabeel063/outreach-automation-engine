@@ -72,7 +72,7 @@ async function renderStaged(data) {
 
     // Stage 3 — emails (already in contacts data, just light up)
     await sleep(500);
-    setStepPending(3, 'Resolving via Eazyreach...');
+    setStepPending(3, 'Resolving via Prospeo...');
     await sleep(500);
     setStepDone(3, 'emails resolved');
 

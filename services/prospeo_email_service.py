@@ -1,14 +1,15 @@
 """
-Stage 3 — Eazyreach
-Resolve LinkedIn profile URLs into verified work email addresses.
-App: https://eazyreach.app
+Stage 3 — Prospeo Email Resolution
+Resolve LinkedIn profile URLs into verified work email addresses
+using Prospeo's enrich-person API.
+API docs: https://app.prospeo.io/api
 """
 
 import os
 import random
 import requests
 
-EAZYREACH_BASE = 'https://api.eazyreach.app/v1'
+PROSPEO_BASE = 'https://api.prospeo.io'
 
 # Common corporate email patterns by frequency
 EMAIL_PATTERNS = [
@@ -35,55 +36,82 @@ def _pattern_email(first, last, domain):
     ) + '@' + domain
 
 
-def _resolve_via_eazyreach(linkedin_url, api_key):
+def _resolve_via_prospeo(linkedin_url, api_key):
     """
-    Call Eazyreach to resolve a LinkedIn URL to a verified email.
+    Call Prospeo enrich-person to resolve a LinkedIn URL to a verified email.
     Returns dict with 'email' and 'confidence' on success, None on failure.
     """
     try:
         resp = requests.post(
-            f'{EAZYREACH_BASE}/resolve',
+            f'{PROSPEO_BASE}/enrich-person',
             headers={
-                'Authorization': f'Bearer {api_key}',
+                'X-KEY': api_key,
                 'Content-Type': 'application/json',
             },
-            json={'linkedin_url': linkedin_url},
+            json={
+                'only_verified_email': True,
+                'enrich_mobile': False,
+                'data': {
+                    'linkedin_url': linkedin_url,
+                },
+            },
             timeout=20,
         )
         if resp.status_code == 200:
             data = resp.json()
-            email = data.get('email', '')
+            response = data.get('response', {})
+
+            # extract email — Prospeo returns it as an object or string
+            email_field = response.get('email', '')
+            if isinstance(email_field, dict):
+                email = email_field.get('value', '') or email_field.get('email', '')
+            else:
+                email = email_field or ''
+
             if email:
                 return {
                     'email': email,
-                    'confidence': data.get('confidence', 85),
-                    'status': data.get('status', 'verified'),
-                    'source': 'eazyreach',
+                    'confidence': 92,  # Prospeo returns verified emails
+                    'email_status': 'verified',
+                    'source_email': 'prospeo_enrich',
                 }
+
+            # If no verified email, try unverified
+            unverified = response.get('email_unverified', '')
+            if isinstance(unverified, dict):
+                unverified = unverified.get('value', '') or unverified.get('email', '')
+            if unverified:
+                return {
+                    'email': unverified,
+                    'confidence': 72,
+                    'email_status': 'unverified',
+                    'source_email': 'prospeo_enrich',
+                }
+
         elif resp.status_code == 402:
-            print('    [!] Eazyreach: out of credits')
+            print('    [!] Prospeo enrich: out of credits')
         elif resp.status_code == 429:
-            print('    [!] Eazyreach: rate limited — slowing down')
+            print('    [!] Prospeo enrich: rate limited — slowing down')
         else:
-            print(f'    [!] Eazyreach returned {resp.status_code}')
+            print(f'    [!] Prospeo enrich returned {resp.status_code}')
     except requests.RequestException as e:
-        print(f'    [!] Eazyreach error: {e}')
+        print(f'    [!] Prospeo enrich error: {e}')
 
     return None
 
 
 def resolve_emails(people):
     """
-    Stage 3: For each person, resolve LinkedIn URL -> verified email.
+    Stage 3: For each person, resolve LinkedIn URL -> verified email via Prospeo.
 
-    If already has an email from Prospeo, skips Eazyreach for that contact.
+    If already has an email from the Prospeo company-search step, keep it.
     Falls back to pattern-based generation when API unavailable.
     """
-    api_key = os.getenv('EAZYREACH_API_KEY', '')
+    api_key = os.getenv('PROSPEO_API_KEY', '')
     results = []
 
     for person in people:
-        # already got email from Prospeo — use it
+        # already got email from the earlier Prospeo company-search — use it
         if person.get('email'):
             person['email_status'] = 'from_prospeo'
             person['confidence'] = 80
@@ -94,7 +122,7 @@ def resolve_emails(people):
         resolved = False
 
         if api_key and linkedin:
-            result = _resolve_via_eazyreach(linkedin, api_key)
+            result = _resolve_via_prospeo(linkedin, api_key)
             if result:
                 person.update(result)
                 resolved = True

@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 from utils.helpers import clean_domain, is_valid_domain
 from services.ocean_service import find_lookalike_companies
 from services.prospeo_service import find_decision_makers
-from services.eazyreach_service import resolve_emails
+from services.prospeo_email_service import resolve_emails
 from services.outreach_generator import generate_outreach
 from services.brevo_service import send_emails
 
@@ -110,7 +110,7 @@ def run_pipeline(domain, limit=5, dry_run=False):
         info(f'{p["full_name"]:<22}  {p.get("title", ""):<28}  {p.get("company", "")}')
 
     # ── Stage 3: Resolve emails ───────────────────────────────────────────────
-    section(3, 4, 'Resolving work email addresses  [Eazyreach]')
+    section(3, 4, 'Resolving work email addresses  [Prospeo]')
     contacts = resolve_emails(people)
 
     if not contacts:

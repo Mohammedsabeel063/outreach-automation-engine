@@ -67,7 +67,7 @@ python pipeline.py openai.com
 [2] Prospeo       — Surfaces C-suite and VP-level contacts at each company
        │                with LinkedIn profile URLs
        ▼
-[3] Eazyreach     — Resolves each LinkedIn profile into a verified work email
+[3] Prospeo       — Resolves each LinkedIn profile into a verified work email
        │
        ▼  ← SAFETY CHECKPOINT (review before sending)
        │
@@ -82,7 +82,7 @@ Each stage feeds directly into the next. No copy-paste. No spreadsheets. No manu
 
 ### 1. Get a domain
 
-Required for Eazyreach and Brevo. Get one free via the [GitHub Student Developer Pack](https://education.github.com/pack) (Namecheap), or buy the cheapest `.me` domain — Vocallabs reimburses it.
+Required for Brevo. Get one free via the [GitHub Student Developer Pack](https://education.github.com/pack) (Namecheap), or buy the cheapest `.me` domain — Vocallabs reimburses it.
 
 ### 2. Create accounts
 
@@ -92,17 +92,15 @@ Use your company email (`you@yourdomain.com`) to sign up:
 |---|---|
 | Ocean.io | [ocean.io](https://ocean.io) |
 | Prospeo | [app.prospeo.io](https://app.prospeo.io) |
-| Eazyreach | [eazyreach.app](https://eazyreach.app) |
 | Brevo | [app.brevo.com](https://app.brevo.com) |
 
-*Eazyreach credits are provided by Vocallabs — fill their form to get topped up.*
+*Prospeo handles both decision maker search (Stage 2) and email resolution (Stage 3) using a single API key.*
 
 ### 3. Configure `.env`
 
 ```
 OCEAN_API_KEY=your_key_here
 PROSPEO_API_KEY=your_key_here
-EAZYREACH_API_KEY=your_key_here
 BREVO_API_KEY=your_key_here
 SENDER_EMAIL=you@yourdomain.com
 SENDER_NAME=Your Name
@@ -168,7 +166,7 @@ Cold emails sent to the wrong person, at the wrong time, from an unwarmed domain
 ├── services/
 │   ├── ocean_service.py     # Stage 1: lookalike companies
 │   ├── prospeo_service.py   # Stage 2: decision makers
-│   ├── eazyreach_service.py # Stage 3: email resolution
+│   ├── prospeo_email_service.py # Stage 3: email resolution (Prospeo)
 │   ├── outreach_generator.py # Email copy (AI or templates)
 │   └── brevo_service.py     # Stage 4: send via Brevo
 │
@@ -200,7 +198,7 @@ $ python pipeline.py stripe.com --dry-run
   [2/4] Finding decision makers  [Prospeo]
   [OK]  Found 10 contacts
 
-  [3/4] Resolving work email addresses  [Eazyreach]
+  [3/4] Resolving work email addresses  [Prospeo]
   [OK]  Resolved 10/10 email addresses
 
   Generating personalized outreach copy...

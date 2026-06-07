@@ -7,6 +7,9 @@ Docs: https://ocean.io/api
 import os
 import random
 import requests
+import logging
+
+logger = logging.getLogger(__name__)
 
 OCEAN_BASE = 'https://ocean.io/api/v1'
 
@@ -80,6 +83,7 @@ def find_lookalike_companies(domain, limit=5):
     api_key = os.getenv('OCEAN_API_KEY', '')
 
     if api_key:
+        logger.info(f"Attempting Ocean.io API call for {domain}")
         try:
             resp = requests.post(
                 f'{OCEAN_BASE}/companies/similar',
@@ -95,15 +99,17 @@ def find_lookalike_companies(domain, limit=5):
                 # Ocean.io may return 'companies' or 'data' key — handle both
                 companies = data.get('companies', data.get('data', []))
                 if companies:
+                    logger.info(f"Ocean.io returned {len(companies)} companies")
                     return {'source': 'ocean', 'companies': companies[:limit]}
             else:
-                print(f'    [!] Ocean.io returned {resp.status_code} — using fallback')
+                logger.warning(f"Ocean.io returned {resp.status_code} — using fallback")
         except requests.RequestException as e:
-            print(f'    [!] Ocean.io request failed: {e} — using fallback')
+            logger.error(f"Ocean.io request failed: {e} — using fallback")
     else:
-        print('    [ocean.io] no API key set — using mock data')
+        logger.info("Ocean.io API key not set — using mock data")
 
     # fallback
+    logger.info(f"Using mock fallback for {domain}")
     category = _guess_category(domain)
     pool = MOCK_DB.get(category, MOCK_DB['default'])
     picked = random.sample([c for c in pool if c['domain'] != domain],
@@ -111,4 +117,5 @@ def find_lookalike_companies(domain, limit=5):
     for c in picked:
         c.setdefault('match_score', random.randint(71, 95))
 
+    logger.info(f"Mock fallback returned {len(picked)} companies")
     return {'source': 'mock', 'companies': picked}

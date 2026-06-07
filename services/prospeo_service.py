@@ -8,7 +8,7 @@ import os
 import random
 import requests
 
-PROSPEO_BASE = 'https://app.prospeo.io/api'
+PROSPEO_BASE = 'https://api.prospeo.io'
 
 TITLES = [
     'CEO', 'CTO', 'COO', 'VP of Sales', 'VP of Engineering',
@@ -81,15 +81,15 @@ def find_decision_makers(companies, per_company=2):
         if api_key:
             try:
                 resp = requests.post(
-                    f'{PROSPEO_BASE}/company-search',
+                    f'{PROSPEO_BASE}/search-person',
                     headers={'X-KEY': api_key, 'Content-Type': 'application/json'},
-                    json={'url': f'https://{domain}', 'limit': per_company},
+                    json={'filters': {'person_search': {'company_domain': domain}}, 'page': 1},
                     timeout=15,
                 )
                 if resp.status_code == 200:
                     data = resp.json()
                     contacts = data.get('response', [])
-                    for c in contacts:
+                    for c in contacts[:per_company]: # limit manually since API returns 25
                         all_people.append({
                             'first_name': c.get('first_name', ''),
                             'last_name': c.get('last_name', ''),
@@ -102,6 +102,9 @@ def find_decision_makers(companies, per_company=2):
                             'source': 'prospeo',
                         })
                     fetched = True
+                elif resp.status_code == 400 and resp.json().get('error_code') == 'NO_RESULTS':
+                    # API worked successfully but found no one. Fallback silently.
+                    pass
                 else:
                     print(f'    [!] Prospeo returned {resp.status_code} for {domain}')
             except requests.RequestException as e:

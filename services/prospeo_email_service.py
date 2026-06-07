@@ -92,6 +92,9 @@ def _resolve_via_prospeo(linkedin_url, api_key):
             print('    [!] Prospeo enrich: out of credits')
         elif resp.status_code == 429:
             print('    [!] Prospeo enrich: rate limited — slowing down')
+        elif resp.status_code == 400 and resp.json().get('error_code') == 'NO_MATCH':
+            # API worked but found nothing. Fallback gracefully.
+            pass
         else:
             print(f'    [!] Prospeo enrich returned {resp.status_code}')
     except requests.RequestException as e:

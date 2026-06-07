@@ -10,53 +10,7 @@ import requests
 
 PROSPEO_BASE = 'https://api.prospeo.io'
 
-TITLES = [
-    'CEO', 'CTO', 'COO', 'VP of Sales', 'VP of Engineering',
-    'Head of Growth', 'Head of Product', 'Chief Revenue Officer',
-    'Director of Business Development', 'VP Marketing',
-    'Head of Partnerships', 'VP of Operations',
-]
 
-FIRST_NAMES = [
-    'Sarah', 'James', 'Priya', 'Michael', 'Emma', 'Carlos',
-    'Alex', 'Rachel', 'David', 'Nina', 'Tom', 'Aisha',
-    'Ryan', 'Lisa', 'Daniel', 'Mei', 'John', 'Fatima',
-]
-
-LAST_NAMES = [
-    'Chen', 'Patel', 'Williams', 'Kim', 'Garcia', 'Mueller',
-    'Johnson', 'Singh', 'Anderson', 'Nakamura', 'Thompson', 'Ali',
-    'Brown', 'Lee', 'Martinez', 'Taylor', 'Khan', 'Rosenberg',
-]
-
-
-def _mock_people_for(company, count=2):
-    """Generate realistic-looking mock contacts for a company."""
-    used = set()
-    titles = random.sample(TITLES, min(count, len(TITLES)))
-    people = []
-
-    for i in range(count):
-        first = random.choice(FIRST_NAMES)
-        last = random.choice(LAST_NAMES)
-        while f'{first}{last}' in used:
-            first = random.choice(FIRST_NAMES)
-            last = random.choice(LAST_NAMES)
-        used.add(f'{first}{last}')
-
-        clean_last = last.lower().replace("'", '')
-        people.append({
-            'first_name': first,
-            'last_name': last,
-            'full_name': f'{first} {last}',
-            'title': titles[i],
-            'company': company['name'],
-            'domain': company['domain'],
-            'linkedin': f'https://linkedin.com/in/{first.lower()}-{clean_last}',
-            'source': 'mock',
-        })
-
-    return people
 
 
 def find_decision_makers(companies, per_company=2):
@@ -103,14 +57,12 @@ def find_decision_makers(companies, per_company=2):
                         })
                     fetched = True
                 elif resp.status_code == 400 and resp.json().get('error_code') == 'NO_RESULTS':
-                    # API worked successfully but found no one. Fallback silently.
-                    pass
+                    print(f'    [!] Prospeo returned NO_RESULTS for {domain} — skipping company')
                 else:
                     print(f'    [!] Prospeo returned {resp.status_code} for {domain}')
             except requests.RequestException as e:
                 print(f'    [!] Prospeo error for {domain}: {e}')
-
-        if not fetched:
-            all_people.extend(_mock_people_for(company, per_company))
+        else:
+            print(f'    [!] No Prospeo API key configured — skipping {domain}')
 
     return all_people
